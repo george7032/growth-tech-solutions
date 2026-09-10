@@ -12,21 +12,22 @@ Be warm, concise and practical. Keep answers under 120 words, avoid jargon, neve
 function isMessage(value: unknown): value is ChatMessage {
   if (typeof value !== "object" || value === null) return false;
   const m = value as Record<string, unknown>;
-  return (m.role === "user" || m.role === "assistant") && typeof m.content === "string";
+  return (m["role"] === "user" || m["role"] === "assistant") && typeof m["content"] === "string";
 }
 
 function extractReply(data: unknown): string {
   if (typeof data !== "object" || data === null) return "";
   const d = data as Record<string, unknown>;
-  if (typeof d.output_text === "string" && d.output_text.trim()) return d.output_text;
+  const direct = d["output_text"];
+  if (typeof direct === "string" && direct.trim()) return direct;
 
   const chunks: string[] = [];
-  const output = Array.isArray(d.output) ? d.output : [];
+  const output = Array.isArray(d["output"]) ? (d["output"] as unknown[]) : [];
   for (const item of output) {
-    const content = (item as Record<string, unknown>)?.content;
+    const content = (item as Record<string, unknown>)?.["content"];
     if (!Array.isArray(content)) continue;
     for (const part of content) {
-      const text = (part as Record<string, unknown>)?.text;
+      const text = (part as Record<string, unknown>)?.["text"];
       if (typeof text === "string") chunks.push(text);
     }
   }
