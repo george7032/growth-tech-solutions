@@ -60,17 +60,27 @@ export function ChatWidget({ open, onOpenChange }: { open: boolean; onOpenChange
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next.slice(-16) }),
       });
-      if (!res.ok) throw new Error(await res.text());
-      const data = (await res.json()) as { reply?: string };
-      setMessages([
-        ...next,
-        {
-          role: "assistant",
-          content:
-            data.reply?.trim() ||
-            "I couldn't put that into words just now. Could you rephrase, or reach us on +254 115 339 092?",
-        },
-      ]);
+      if (!res.ok || !res.body) throw new Error(await res.text().catch(() => "failed"));
+
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      let reply = "";
+      setMessages([...next, { role: "assistant", content: "" }]);
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        reply += value;
+        setMessages([...next, { role: "assistant", content: reply }]);
+      }
+      if (!reply.trim()) {
+        setMessages([
+          ...next,
+          {
+            role: "assistant",
+            content:
+              "I couldn't put that into words just now. Could you rephrase, or reach us on +254 115 339 092?",
+          },
+        ]);
+      }
     } catch {
       setError("The assistant is unavailable right now. Please try again or message us on WhatsApp.");
     } finally {
